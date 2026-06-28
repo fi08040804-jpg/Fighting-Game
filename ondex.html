@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Real GTA 2D</title>
+  <style>
+    body { margin:0; overflow:hidden; background:#000; }
+    canvas { display:block; }
+  </style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// PLAYER
+let player = {
+  x: 400,
+  y: 300,
+  size: 20,
+  speed: 3,
+  health: 100
+};
+
+// ENEMIES
+let enemies = [];
+for(let i=0;i<3;i++){
+  enemies.push({
+    x: Math.random()*800,
+    y: Math.random()*600,
+    size:20,
+    speed:1.5,
+    bullets:[]
+  });
+}
+
+// BULLETS
+let bullets = [];
+let keys = {};
+let score = 0;
+
+// CONTROLS
+document.addEventListener("keydown", e=>{
+  keys[e.key]=true;
+
+  if(e.key===" "){
+    bullets.push({x:player.x,y:player.y,dx:6,dy:0});
+  }
+});
+document.addEventListener("keyup", e=>keys[e.key]=false);
+
+// MOVE PLAYER
+function move(){
+  if(keys["ArrowUp"]) player.y-=player.speed;
+  if(keys["ArrowDown"]) player.y+=player.speed;
+  if(keys["ArrowLeft"]) player.x-=player.speed;
+  if(keys["ArrowRight"]) player.x+=player.speed;
+}
+
+// ENEMY AI
+function moveEnemies(){
+  enemies.forEach(e=>{
+    let dx = player.x - e.x;
+    let dy = player.y - e.y;
+    let dist = Math.hypot(dx,dy);
+
+    e.x += (dx/dist)*e.speed;
+    e.y += (dy/dist)*e.speed;
+
+    // SHOOT
+    if(Math.random()<0.02){
+      e.bullets.push({x:e.x,y:e.y,dx:(dx/dist)*4,dy:(dy/dist)*4});
+    }
+
+    // UPDATE ENEMY BULLETS
+    e.bullets.forEach(b=>{
+      b.x+=b.dx;
+      b.y+=b.dy;
+    });
+  });
+}
+
+// COLLISION
+function hit(a,b,sizeA,sizeB){
+  return a.x < b.x+sizeB &&
+         a.x+sizeA > b.x &&
+         a.y < b.y+sizeB &&
+         a.y+sizeA > b.y;
+}
+
+// GAME LOOP
+function game(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  move();
+  moveEnemies();
+
+  // DRAW PLAYER
+  ctx.fillStyle="yellow";
+  ctx.fillRect(player.x,player.y,20,20);
+
+  // DRAW PLAYER BULLETS
+  ctx.fillStyle="white";
+  bullets.forEach(b=>{
+    b.x+=b.dx;
+    ctx.fillRect(b.x,b.y,5,5);
+  });
+
+  // ENEMIES
+  enemies.forEach(e=>{
+    ctx.fillStyle="red";
+    ctx.fillRect(e.x,e.y,20,20);
+
+    // DRAW ENEMY BULLETS
+    ctx.fillStyle="orange";
+    e.bullets.forEach(b=>{
+      ctx.fillRect(b.x,b.y,5,5);
+
+      if(hit(player,b,20,5)){
+        player.health -= 5;
+      }
+    });
+
+    // PLAYER SHOOTS ENEMY
+    bullets.forEach((b,bi)=>{
+      if(hit(e,b,20,5)){
+        enemies.splice(enemies.indexOf(e),1);
+        bullets.splice(bi,1);
+        score++;
+      }
+    });
+  });
+
+  // GAME OVER
+  if(player.health <= 0){
+    alert("💀 GAME OVER | Score: "+score);
+    location.reload();
+  }
+
+  // UI
+  ctx.fillStyle="white";
+  ctx.fillText("Health: "+player.health,20,30);
+  ctx.fillText("Score: "+score,20,50);
+
+  requestAnimationFrame(game);
+}
+
+game();
+</script>
+
+</body>
+</html>
